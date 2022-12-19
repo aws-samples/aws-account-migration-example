@@ -1,0 +1,11 @@
+out
+.venv
+.idea
+*.iml
+bandit-results.txt
+poetry-audit-results.txt
+cfn_nag-results.txt
+*.bkp
+*.dtmp
+__pycache__
+repolinter-results.txt

@@ -1,0 +1,39 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: Common IAM roles to push out to the accounts
+Parameters:
+  SourceManagementAccountId:
+    Type: String
+  TargetManagementAccountId:
+    Type: String
+  TargetOrganizationId:
+    Type: String
+Resources:
+  AwsAccountMigrationAcceptInvitationRole:
+    Type: AWS::IAM::Role
+    Properties:
+      Path: "/"
+      Policies:
+          -
+            PolicyName: "AllowInvitationAcceptance"
+            PolicyDocument:
+              Version: "2012-10-17"
+              Statement:
+                - Effect: "Allow"
+                  Action:
+                    - "organizations:AcceptHandshake"
+                  Resource: !Sub "arn:aws:organizations::${TargetManagementAccountId}:handshake/${TargetOrganizationId}/invite/h-*"
+                - Effect: "Allow"
+                  Action:
+                    - "iam:CreateServiceLinkedRole"
+                  Resource: "*"
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: "Allow"
+            Principal: {
+                AWS: [!Ref SourceManagementAccountId]
+            }
+            Action:
+              - "sts:AssumeRole"
+      Description: Role to allow AWS Account Migration Example script to accept invitations
+      RoleName: AwsAccountMigrationAcceptInvitationRole

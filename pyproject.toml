@@ -1,0 +1,20 @@
+[tool.poetry]
+name = "aws-account-migration-example"
+version = "0.1.0"
+description = "Example script from migrating all accounts from one AWS Organization to another"
+authors = ["Galen Dunkleberger <awsgalen@amazon.com>"]
+license = "MIT-0"
+
+[tool.poetry.dependencies]
+python = "^3.10"
+boto3 = "^1.26.24"
+prompt-toolkit = "^3.0.36"
+
+[tool.poetry.dev-dependencies]
+
+[build-system]
+requires = ["poetry-core>=1.0.0"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.poetry.scripts]
+migrate = "aws_account_migration_example:__init__.py"
