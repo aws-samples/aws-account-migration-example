@@ -13,14 +13,16 @@
 #  OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
 #  SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
-from typing import List, Optional
-from aws_account_migration_example.aws import Aws
-from boto3.session import Session
-import botocore
 import logging
-from aws_account_migration_example.validator import yes_no_validator
 from distutils.util import strtobool
+from typing import List
+
+import botocore
+from boto3.session import Session
 from prompt_toolkit import prompt
+
+from aws_account_migration_example.runtime.aws import Aws
+from aws_account_migration_example.runtime.validator import yes_no_validator
 
 
 class AwsOrganization:
@@ -36,8 +38,11 @@ class AwsOrganization:
         self.logger.info(
             f" Retrieving source organization and account information using profile {kwargs['profile_name']}"
         )
-        session = Session(profile_name=kwargs["profile_name"])
-        self._aws = Aws(session=session)
+        if "aws" in kwargs:
+            self._aws = kwargs["aws"]
+        else:
+            session = Session(profile_name=kwargs["profile_name"])
+            self._aws = Aws(session=session)
         self.organization = self._aws.organizations.describe_organization()[
             "Organization"
         ]
@@ -60,6 +65,7 @@ class AwsOrganization:
 
 class SourceAwsOrganization(AwsOrganization):
     child_accounts: List[dict] = []
+    account_was_specified = False
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
@@ -72,6 +78,7 @@ class SourceAwsOrganization(AwsOrganization):
                 AccountId=kwargs["account"]
             )
             self.child_accounts.append(response["Account"])
+            self.account_was_specified = True
         else:
             self.logger.info(
                 f"Retrieving all child accounts for management account {self.account_details()}"
@@ -96,7 +103,15 @@ class SourceAwsOrganization(AwsOrganization):
             )
             if not strtobool(confirm):
                 self.logger.info(f"Declining invitation {invitation['Id']}...")
-                self._aws.organizations.decline_handshake(HandshakeId=invitation["Id"])
+                if source["Id"] == self.root_account["Id"]:
+                    self._aws.organizations.decline_handshake(
+                        HandshakeId=invitation["Id"]
+                    )
+                else:
+                    account_scoped_aws = self._aws.account_scoped_instance(source)
+                    account_scoped_aws.organizations.decline_handshake(
+                        HandshakeId=invitation["Id"]
+                    )
                 return
         if source["Id"] == self.root_account["Id"]:
             if not self.migrate_management_account(invitation, is_quiet):
@@ -107,17 +122,7 @@ class SourceAwsOrganization(AwsOrganization):
                 HandshakeId=invitation["Id"]
             )["Handshake"]
         else:
-            response = self._aws.sts.assume_role(
-                RoleArn=f"arn:aws:iam::{source['Id']}:role/AwsAccountMigrationAcceptInvitationRole",
-                RoleSessionName="aws-account-migration-example",
-            )
-            credentials = response["Credentials"]
-            session = Session(
-                aws_access_key_id=credentials["AccessKeyId"],
-                aws_secret_access_key=credentials["SecretAccessKey"],
-                aws_session_token=credentials["SessionToken"],
-            )
-            account_scoped_aws = Aws(session=session)
+            account_scoped_aws = self._aws.account_scoped_instance(source)
             self.logger.info(
                 f"Removing {source['Id']} from organization {self.organization['Id']}..."
             )
@@ -207,10 +212,7 @@ class TargetAwsOrganization(AwsOrganization):
     def invite(self, source: SourceAwsOrganization, is_quiet=False):
         for account in source.child_accounts:
             self.send_invitation(account, is_quiet)
-        # If we've passed in a single account to be moved and that account is not the management account don't try to move the management account
-        if (
-            len(source.child_accounts) == 1
-            and source.child_accounts[0] != source.root_account["Id"]
-        ) or len(source.child_accounts) > 1:
+        # if we didn't specify a single account invite the root account
+        if not source.account_was_specified:
             self.send_invitation(source.root_account, is_quiet)
         return self.invitations

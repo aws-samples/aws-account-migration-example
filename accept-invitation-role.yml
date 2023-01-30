@@ -21,6 +21,7 @@ Resources:
                 - Effect: "Allow"
                   Action:
                     - "organizations:AcceptHandshake"
+                    - "organizations:DeclineHandshake"
                   Resource: !Sub "arn:aws:organizations::${TargetManagementAccountId}:handshake/${TargetOrganizationId}/invite/h-*"
                 - Effect: "Allow"
                   Action:

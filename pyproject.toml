@@ -12,9 +12,16 @@ prompt-toolkit = "^3.0.36"
 
 [tool.poetry.dev-dependencies]
 
+[tool.poetry.group.dev.dependencies]
+pytest = "^7.2.1"
+httpretty = "^1.1.4"
+moto = "^4.1.1"
+decorator = "^5.1.1"
+pytz = "^2022.7.1"
+
 [build-system]
 requires = ["poetry-core>=1.0.0"]
 build-backend = "poetry.core.masonry.api"
 
 [tool.poetry.scripts]
-migrate = "aws_account_migration_example:__init__.py"
+migrate = "aws_account_migration_example.runtime.migrate:main"
