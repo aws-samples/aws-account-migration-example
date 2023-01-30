@@ -45,17 +45,19 @@ options:
                         This is the profile name that has Admin access to the management account of the TARGET AWS organization that source accounts will be migrated to
   -a ACCOUNT, --account ACCOUNT
                         Migrate a specific account from the SOURCE AWS organization to the TARGET AWS organization
+  --ou ORGANIZATIONAL_UNIT
+                        The destination OU in the TARGET AWS organization, if not specified account will land in the root of the TARGET Aws organization
   -q, --quiet           Do not prompt for confirmation
 
 --help for more info
 ```
 * To migrate a single account run the following command
 ```
-> poetry run migrate -s <SOURCE_ORGANIZATION_PROFILE_NAME> -t <TARGET_ORGANIZATION_PROFILE_NAME> -a <ACCOUNT_NUMBER_TO_MIGRATE>
+> poetry run migrate -s <SOURCE_ORGANIZATION_PROFILE_NAME> -t <TARGET_ORGANIZATION_PROFILE_NAME> -a <ACCOUNT_NUMBER_TO_MIGRATE> --ou <DESTINATION_ORGANIZATIONAL_UNIT_ID>
 ```
 * To migrate all accounts from the source organization to the target organization run the following command. 
 ```
-> poetry run migrate -s <SOURCE_ORGANIZATION_PROFILE_NAME> -t <TARGET_ORGANIZATION_PROFILE_NAME>
+> poetry run migrate -s <SOURCE_ORGANIZATION_PROFILE_NAME> -t <TARGET_ORGANIZATION_PROFILE_NAME> --ou <DESTINATION_ORGANIZATIONAL_UNIT_ID>
 ```
 **NOTE**: This operation will also migrate the source organization's management account which includes deletion of the source organization
 

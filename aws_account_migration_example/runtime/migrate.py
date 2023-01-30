@@ -62,7 +62,7 @@ def main():
         "--ou",
         dest="organizational_unit",
         required=False,
-        help="The destination OU in the TARGET AWS organization",
+        help="The destination OU in the TARGET AWS organization, if not specified account will land in the root of the TARGET Aws organization",
     )
     parser.add_argument(
         "-q",
