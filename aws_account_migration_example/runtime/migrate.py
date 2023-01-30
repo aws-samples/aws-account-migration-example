@@ -59,15 +59,25 @@ def main():
         help="Migrate a specific account from the SOURCE AWS organization to the TARGET AWS organization",
     )
     parser.add_argument(
+        "--ou",
+        dest="organizational_unit",
+        required=False,
+        help="The destination OU in the TARGET AWS organization",
+    )
+    parser.add_argument(
         "-q",
         "--quiet",
         dest="is_quiet",
         action="store_true",
+        required=False,
         help="Do not prompt for confirmation",
     )
+
     args = parser.parse_args()
     source = SourceAwsOrganization(profile_name=args.source, account=args.account)
-    target = TargetAwsOrganization(profile_name=args.target)
+    target = TargetAwsOrganization(
+        profile_name=args.target, organizational_unit=args.organizational_unit
+    )
 
     if not args.is_quiet:
         confirm = prompt(
@@ -80,7 +90,8 @@ def main():
             parser.exit(-1, "Migration canceled")
 
     invitations = target.invite(source, args.is_quiet)
-    source.accept(invitations, args.is_quiet)
+    accepted_ids = source.accept(invitations, args.is_quiet)
+    target.move_accounts(accepted_ids, args.is_quiet)
     parser.exit(0, "Migration complete")
 
 
