@@ -15,7 +15,7 @@
 
 import logging
 from distutils.util import strtobool
-from typing import List
+from typing import List, Optional
 
 import botocore
 from boto3.session import Session
@@ -93,7 +93,8 @@ class SourceAwsOrganization(AwsOrganization):
                     if account["Id"] != self.root_account["Id"]:
                         self.child_accounts.append(account)
 
-    def accept_invitation(self, invitation: dict, is_quiet=False):
+    def accept_invitation(self, invitation: dict, is_quiet=False) -> Optional[str]:
+        account_id = None
         source, target = self.get_invitation_source_and_target(invitation)
         if not is_quiet:
             confirm = prompt(
@@ -104,23 +105,35 @@ class SourceAwsOrganization(AwsOrganization):
             if not strtobool(confirm):
                 self.logger.info(f"Declining invitation {invitation['Id']}...")
                 if source["Id"] == self.root_account["Id"]:
-                    self._aws.organizations.decline_handshake(
+                    response_handshake = self._aws.organizations.decline_handshake(
                         HandshakeId=invitation["Id"]
+                    )["Handshake"]
+                    self.logger.info(
+                        f"Invitation {invitation['Id']} for {source['Id']} from organization {self.organization['Id']} {response_handshake['State']}!"
                     )
                 else:
                     account_scoped_aws = self._aws.account_scoped_instance(source)
-                    account_scoped_aws.organizations.decline_handshake(
-                        HandshakeId=invitation["Id"]
+                    response_handshake = (
+                        account_scoped_aws.organizations.decline_handshake(
+                            HandshakeId=invitation["Id"]
+                        )
+                    )["Handshake"]
+                    self.logger.info(
+                        f"Invitation {invitation['Id']} for {source['Id']} from organization {self.organization['Id']} {response_handshake['State']}!"
                     )
-                return
+                return None
         if source["Id"] == self.root_account["Id"]:
             if not self.migrate_management_account(invitation, is_quiet):
                 self.logger.warning("Could not delete organization.")
-                return
+                return None
             self.logger.info(f"Accepting invitation {invitation['Id']}...")
             response_handshake = self._aws.organizations.accept_handshake(
                 HandshakeId=invitation["Id"]
             )["Handshake"]
+            account_id = source["Id"]
+            self.logger.info(
+                f"Invitation {invitation['Id']} for {source['Id']} from organization {self.organization['Id']} {response_handshake['State']}!"
+            )
         else:
             account_scoped_aws = self._aws.account_scoped_instance(source)
             self.logger.info(
@@ -133,9 +146,11 @@ class SourceAwsOrganization(AwsOrganization):
             response_handshake = account_scoped_aws.organizations.accept_handshake(
                 HandshakeId=invitation["Id"]
             )["Handshake"]
-        self.logger.info(
-            f"Invitation {invitation['Id']} for {source['Id']} from organization {self.organization['Id']} {response_handshake['State']}!"
-        )
+            account_id = source["Id"]
+            self.logger.info(
+                f"Invitation {invitation['Id']} for {source['Id']} from organization {self.organization['Id']} {response_handshake['State']}!"
+            )
+        return account_id
 
     def __sort_invitations(self, invite):
         source, target = self.get_invitation_source_and_target(invite)
@@ -144,11 +159,15 @@ class SourceAwsOrganization(AwsOrganization):
         else:
             return -1
 
-    def accept(self, invitations: List[dict], is_quiet=False):
+    def accept(self, invitations: List[dict], is_quiet=False) -> [str]:
         # first sort the invitations to make sure the management account is last
         sorted_invitations = sorted(invitations, key=self.__sort_invitations)
+        account_ids: [str] = []
         for invitation in sorted_invitations:
-            self.accept_invitation(invitation, is_quiet)
+            account_id = self.accept_invitation(invitation, is_quiet)
+            if account_id is not None:
+                account_ids.append(account_id)
+        return account_ids
 
     def migrate_management_account(self, invitation: dict, is_quiet=False):
         if not is_quiet:
@@ -169,9 +188,28 @@ class SourceAwsOrganization(AwsOrganization):
 class TargetAwsOrganization(AwsOrganization):
     invitations: List[dict] = []
     organization_id: str
+    destination_ou: Optional[dict] = None
+    root_ou: str
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
+        if (
+            "organizational_unit" in kwargs
+            and kwargs["organizational_unit"] is not None
+        ):
+            organization_unit_id = kwargs["organizational_unit"]
+            self.logger.info(f"Retrieving OU {organization_unit_id}")
+            self.destination_ou = self._aws.organizations.describe_organizational_unit(
+                OrganizationalUnitId=organization_unit_id
+            )["OrganizationalUnit"]
+            self.logger.info(
+                f"Found OU {self.destination_ou['Id']} - {self.destination_ou['Name']}"
+            )
+            self.root_ou = self._aws.organizations.list_roots(MaxResults=1)["Roots"][0][
+                "Id"
+            ]
+            self.logger.info(f"Found root OU {self.root_ou}")
+
         self.logger.info(
             f"Retrieving existing invitations for management account {self.account_details()}"
         )
@@ -216,3 +254,26 @@ class TargetAwsOrganization(AwsOrganization):
         if not source.account_was_specified:
             self.send_invitation(source.root_account, is_quiet)
         return self.invitations
+
+    def move_accounts(self, accounts: [str], is_quiet=False):
+        for account in accounts:
+            self.move_account(account, is_quiet)
+
+    def move_account(self, account: str, is_quiet=False):
+        if self.destination_ou is not None:
+            if not is_quiet:
+                confirm = prompt(
+                    f"Move account {account} from root OU {self.root_ou} to destination OU {self.destination_ou['Id']} - {self.destination_ou['Name']}. Proceed? (Y/N): ",
+                    default="N",
+                    validator=yes_no_validator,
+                )
+                if not strtobool(confirm):
+                    return
+            self.logger.info(
+                f"Moving account {account} from root OU {self.root_ou} to destination OU {self.destination_ou['Id']} - {self.destination_ou['Name']}"
+            )
+            self._aws.organizations.move_account(
+                AccountId=account,
+                SourceParentId=self.root_ou,
+                DestinationParentId=self.destination_ou["Id"],
+            )
