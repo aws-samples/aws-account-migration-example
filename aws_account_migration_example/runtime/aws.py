@@ -14,6 +14,7 @@
 #  SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 import boto3
+from boto3.session import Session
 from botocore.config import Config
 
 
@@ -24,8 +25,8 @@ class Aws:
         )
         default_config = Config(retries={"max_attempts": 3, "mode": "standard"})
         self.organizations = (
-            kwargs["ssm"]
-            if "ssm" in kwargs
+            kwargs["organizations"]
+            if "organizations" in kwargs
             else self.session.client("organizations", config=default_config)
         )
         self.list_accounts = self.organizations.get_paginator("list_accounts")
@@ -37,3 +38,16 @@ class Aws:
             if "sts" in kwargs
             else self.session.client("sts", config=default_config)
         )
+
+    def account_scoped_instance(self, source):
+        response = self.sts.assume_role(
+            RoleArn=f"arn:aws:iam::{source['Id']}:role/AwsAccountMigrationAcceptInvitationRole",
+            RoleSessionName="aws-account-migration-example",
+        )
+        credentials = response["Credentials"]
+        session = Session(
+            aws_access_key_id=credentials["AccessKeyId"],
+            aws_secret_access_key=credentials["SecretAccessKey"],
+            aws_session_token=credentials["SessionToken"],
+        )
+        return Aws(session=session)
