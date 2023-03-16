@@ -8,7 +8,7 @@ Before performing any such migration you should read _all_ the considerations me
 article. The script does not handle updating the account payment method, updating the account support plans, nor phone verification. 
 These prerequisite steps will need to be handled manually or with help from AWS Support. 
 
-It is **strongly** recommended that you reach out to AWS support or your AWS account team to discuss any risks associated with migrating accounts between organizations.
+It is **strongly** recommended that you reach out to AWS support and your AWS account team to discuss any risks associated with migrating accounts between organizations.
 
 
 ## Prerequisites
