@@ -20,6 +20,7 @@ from botocore.config import Config
 
 class Aws:
     def __init__(self, **kwargs):
+
         self.session = (
             kwargs["session"] if "session" in kwargs else boto3.session.Session()
         )
@@ -38,6 +39,7 @@ class Aws:
             if "sts" in kwargs
             else self.session.client("sts", config=default_config)
         )
+
 
     def account_scoped_instance(self, source):
         response = self.sts.assume_role(

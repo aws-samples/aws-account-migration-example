@@ -7,6 +7,14 @@ from moto import mock_organizations, mock_sts
 
 from aws_account_migration_example.runtime.aws import Aws
 from aws_account_migration_example.tests import date_start_end
+from unittest.mock import MagicMock
+
+
+def __serviceCatalog(session):
+    service_catalog = session.client("servicecatalog")
+    service_catalog.provision_product = MagicMock()
+    # monkey patch here
+    return service_catalog
 
 
 def __organizations(session):
@@ -74,8 +82,8 @@ def __session():
     return boto3.session.Session()
 
 
-def __aws(organizations, sts):
-    return Aws(organizations=organizations, sts=sts)
+def __aws(organizations, sts, service_catalog):
+    return Aws(organizations=organizations, sts=sts, servicecatalog=service_catalog)
 
 
 @decorator
@@ -87,7 +95,8 @@ def mock_aws(f, *args, **kw):
                 session = __session()
                 organizations = __organizations(session)
                 sts = __sts(session)
-                aws = __aws(organizations, sts)
+                service_catalog = __serviceCatalog(session)
+                aws = __aws(organizations, sts, service_catalog)
 
                 def account_scoped_instance(*args, **kw):
                     return aws
