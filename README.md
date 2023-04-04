@@ -19,8 +19,30 @@ In additions to the considerations and caution mentioned in the [overview](#Over
 1. Install [Poetry](https://python-poetry.org/docs/) on your local machine
 1. On your local machine you _must_ have an [AWS credentials file](https://docs.aws.amazon.com/cli/latest/userguide/cli-configure-files.html) 
 that contains [named profiles](https://docs.aws.amazon.com/cli/latest/userguide/cli-configure-profiles.html) for the source AWS organization management account
-and the target AWS organization management account. These named profiles need to be for roles that have Administrator level access.
-1. You must deploy the [accept-invitation-role.yml](./accept-invitation-role.yml) CloudFormation template to all the accounts in the source AWS organization being migrated. 
+and the target AWS organization management account. These named profiles need to be for roles that have [AWSOrganizationsFullAccess](https://console.aws.amazon.com/iam/home#/policies/arn:aws:iam::aws:policy/AWSOrganizationsFullAccess) AWS managed policy and the following inline policy.
+   ```json
+   {
+      "Version": "2012-10-17",
+      "Statement": [
+         {
+            "Sid": "AssumeAwsAccountMigrationAcceptInvitationRole",
+            "Effect": "Allow",
+            "Action": "sts:AssumeRole",
+            "Resource": "arn:aws:iam::*:role/AwsAccountMigrationAcceptInvitationRole"
+         },
+         {
+            "Sid": "ReadIdentityAndToken",
+            "Effect": "Allow",
+            "Action": [
+               "sts:GetSessionToken",
+               "sts:GetCallerIdentity"
+            ],
+            "Resource": "*"
+         }
+      ]
+   }
+   ```
+1. You must deploy the [accept-invitation-role.yml](./accept-invitation-role.yml) CloudFormation template to all the accounts in the **SOURCE** AWS organization being migrated. 
    1. If you are migrating a large number of accounts you can deploy the template as a [StackSet](https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/stacksets-concepts.html) from the source AWS organization management account.
 
 ## Execution
