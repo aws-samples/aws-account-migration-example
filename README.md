@@ -4,11 +4,13 @@
 
 This project provides **example** code of how customers can automate the migration of AWS accounts from one AWS organization to another. 
 
-Before performing any such migration you should read _all_ the considerations mentioned in this [knowledge center](https://aws.amazon.com/premiumsupport/knowledge-center/organizations-move-accounts/) 
-article. The script does not handle updating the account payment method, updating the account support plans, nor phone verification. 
+Before performing any such migration it is important you read through and understand _all_ the considerations mentioned in this [knowledge center](https://aws.amazon.com/premiumsupport/knowledge-center/organizations-move-accounts/) 
+article. The script does not handle updating the account payment methods, updating the account support plans, nor phone verification. 
 These prerequisite steps will need to be handled manually or with help from AWS Support. 
 
-It is **strongly** recommended that you reach out to AWS support and your AWS account team to discuss any risks associated with migrating accounts between organizations.
+It is **strongly** recommended that you reach out to AWS support and your AWS account team to discuss any risks associated with migrating accounts between organizations. Not doing so could potentially impact workloads running in your AWS accounts.
+
+It is also recommended that prior to migration you run the [Account Assessment for AWS Organizations solution](https://aws.amazon.com/solutions/implementations/account-assessment-for-aws-organizations/) to identify any resource-based policy dependencies for your AWS Organizations accounts.
 
 
 ## Prerequisites
