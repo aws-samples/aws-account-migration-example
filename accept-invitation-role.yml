@@ -26,7 +26,12 @@ Resources:
                 - Effect: "Allow"
                   Action:
                     - "iam:CreateServiceLinkedRole"
-                  Resource: "*"
+                  Resource: "arn:aws:iam::*:role/aws-service-role/organizations.amazonaws.com/*"
+                  Condition: {
+                    "StringLike": {
+                      "iam:AWSServiceName": "organizations.amazonaws.com"
+                    }
+                  }
       AssumeRolePolicyDocument:
         Version: "2012-10-17"
         Statement:
