@@ -25,6 +25,15 @@ from aws_account_migration_example.runtime.aws import Aws
 from aws_account_migration_example.runtime.validator import yes_no_validator
 
 
+def get_invitation_source_and_target(invite: dict):
+    source = [x for x in invite["Parties"] if x["Type"] == "ACCOUNT"]
+    target = [x for x in invite["Parties"] if x["Type"] == "ORGANIZATION"]
+    return (
+        source[0] if len(source) > 0 else None,
+        target[0] if len(target) > 0 else None,
+    )
+
+
 class AwsOrganization:
     profile: str
     root_account: dict
@@ -53,14 +62,6 @@ class AwsOrganization:
 
     def account_details(self):
         return f"{self.organization['Id']} - {self.root_account['Id']} - {self.root_account['Email']}"
-
-    def get_invitation_source_and_target(self, invite: dict):
-        source = [x for x in invite["Parties"] if x["Type"] == "ACCOUNT"]
-        target = [x for x in invite["Parties"] if x["Type"] == "ORGANIZATION"]
-        return (
-            source[0] if len(source) > 0 else None,
-            target[0] if len(target) > 0 else None,
-        )
 
 
 class SourceAwsOrganization(AwsOrganization):
@@ -95,7 +96,7 @@ class SourceAwsOrganization(AwsOrganization):
 
     def accept_invitation(self, invitation: dict, is_quiet=False) -> Optional[str]:
         account_id = None
-        source, target = self.get_invitation_source_and_target(invitation)
+        source, target = get_invitation_source_and_target(invitation)
         if not is_quiet:
             confirm = prompt(
                 f"Accept invite {invitation['Id']} to move account {source['Id']} to organization {target['Id']}. Proceed? (Y/N): ",
@@ -153,7 +154,7 @@ class SourceAwsOrganization(AwsOrganization):
         return account_id
 
     def __sort_invitations(self, invite):
-        source, target = self.get_invitation_source_and_target(invite)
+        source, target = get_invitation_source_and_target(invite)
         if source["Id"] == self.root_account["Id"]:
             return 1
         else:
@@ -222,7 +223,12 @@ class TargetAwsOrganization(AwsOrganization):
         for page in handshakes_iterator:
             for invite in page["Handshakes"]:
                 if invite["State"] == "OPEN":
-                    self.invitations.append(invite)
+                    if "account" in kwargs and kwargs["account"] is not None:
+                        source, target = get_invitation_source_and_target(invite)
+                        if kwargs["account"] == source["Id"]:
+                            self.invitations.append(invite)
+                    else:
+                        self.invitations.append(invite)
 
     def send_invitation(self, account: dict, is_quiet=False):
         if not is_quiet:

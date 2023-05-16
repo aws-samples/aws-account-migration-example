@@ -12,6 +12,8 @@ def test_invite_with_single_account(aws: Aws = None):
     source = SourceAwsOrganization(
         profile_name="test01", account=account["Id"], aws=aws
     )
-    target = TargetAwsOrganization(profile_name="test02", aws=aws)
+    target = TargetAwsOrganization(
+        profile_name="test02", aws=aws, account=account["Id"]
+    )
     invitations = target.invite(source, True)
     source.accept(invitations, True)

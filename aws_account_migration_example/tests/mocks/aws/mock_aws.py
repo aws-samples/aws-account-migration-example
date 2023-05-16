@@ -55,7 +55,25 @@ def __organizations(session):
         }
 
     def list_handshakes_for_organization(**kwargs):
-        return {"Handshakes": [], "NextToken": None}
+        return {
+            "Handshakes": [
+                {
+                    "Id": "xyz",
+                    "Arn": "string",
+                    "Parties": [
+                        {"Id": "724779086805", "Type": "ACCOUNT"},
+                    ],
+                    "State": "OPEN",
+                    "RequestedTimestamp": start.timestamp(),
+                    "ExpirationTimestamp": end.timestamp(),
+                    "Action": "INVITE",
+                    "Resources": [
+                        {"Value": "string", "Type": "ORGANIZATION"},
+                    ],
+                }
+            ],
+            "NextToken": None,
+        }
 
     organizations_client.list_handshakes_for_organization = (
         list_handshakes_for_organization

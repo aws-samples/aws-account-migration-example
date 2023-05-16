@@ -76,7 +76,9 @@ def main():
     args = parser.parse_args()
     source = SourceAwsOrganization(profile_name=args.source, account=args.account)
     target = TargetAwsOrganization(
-        profile_name=args.target, organizational_unit=args.organizational_unit
+        profile_name=args.target,
+        organizational_unit=args.organizational_unit,
+        account=args.account,
     )
 
     if not args.is_quiet:
