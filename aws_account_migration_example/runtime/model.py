@@ -36,7 +36,7 @@ class AwsOrganization:
         self.logger = logging.getLogger(kwargs["profile_name"])
         self.logger.setLevel(logging.INFO)
         self.logger.info(
-            f" Retrieving source organization and account information using profile {kwargs['profile_name']}"
+            f" Retrieving organization and root account information using profile {kwargs['profile_name']}"
         )
         if "aws" in kwargs:
             self._aws = kwargs["aws"]
@@ -49,7 +49,7 @@ class AwsOrganization:
         self.root_account = self._aws.organizations.describe_account(
             AccountId=self.organization["MasterAccountId"]
         )["Account"]
-        self.logger.info(f" Source account is {self.account_details()}")
+        self.logger.info(f" Root account is {self.account_details()}")
 
     def account_details(self):
         return f"{self.organization['Id']} - {self.root_account['Id']} - {self.root_account['Email']}"
@@ -154,6 +154,11 @@ class SourceAwsOrganization(AwsOrganization):
 
     def __sort_invitations(self, invite):
         source, target = self.get_invitation_source_and_target(invite)
+        if source is None:
+            raise Exception("Invitation source should not be null")
+        if self.root_account is None:
+            raise Exception("Root account source should not be null")
+
         if source["Id"] == self.root_account["Id"]:
             return 1
         else:
